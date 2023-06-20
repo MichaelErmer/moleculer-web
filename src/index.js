@@ -560,7 +560,11 @@ module.exports = {
 
 			// onBeforeCall handling
 			if (route.onBeforeCall) {
-				await route.onBeforeCall.call(this, ctx, route, req, res, alias);
+				if (Array.isArray(route.onBeforeCall)) {
+					await Promise.all(route.onBeforeCall.map(fn => fn.call(this, ctx, route, req, res, alias)));
+				} else {
+					await route.onBeforeCall.call(this, ctx, route, req, res, alias);
+				}
 			}
 
 			// Authentication
@@ -646,8 +650,15 @@ module.exports = {
 				// Post-process the response
 
 				// onAfterCall handling
-				if (route.onAfterCall)
-					data = await route.onAfterCall.call(this, ctx, route, req, res, data);
+				if (route.onAfterCall) {
+					if (Array.isArray(route.onAfterCall)) {
+						for (const fn of route.onAfterCall) {
+							data = await fn.call(this, ctx, route, req, res, data);
+						}
+					} else {
+						data = await route.onAfterCall.call(this, ctx, route, req, res, data);
+					}
+				}
 
 				// Send back the response
 				this.sendResponse(req, res, data, req.$endpoint.action);
